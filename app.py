@@ -102,6 +102,39 @@ if uploaded is not None:
 
 # Compress button and processing
 if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
+    # Check if FFmpeg is available
+    try:
+        subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        st.error("❌ FFmpeg is not installed or not found in system PATH.")
+        st.info("""
+        **To install FFmpeg:**
+        
+        **On Ubuntu/Debian:**
+        ```bash
+        sudo apt update && sudo apt install ffmpeg
+        ```
+        
+        **On macOS:**
+        ```bash
+        brew install ffmpeg
+        ```
+        
+        **On Windows:**
+        - Download from https://ffmpeg.org/download.html
+        - Add to system PATH
+        
+        **For Docker/Cloud deployments:**
+        - Add FFmpeg to your Dockerfile or requirements
+        
+        **Alternative:** Enable 'Demo Mode' below to test the interface without FFmpeg.
+        """)
+        
+        # Demo mode toggle
+        demo_mode = st.checkbox("🧪 Enable Demo Mode (simulates compression without FFmpeg)")
+        if not demo_mode:
+            st.stop()
+    
     progress_bar = st.progress(0)
     status_text = st.empty()
     
@@ -149,51 +182,82 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
             # Show debug command
             st.write("Debug - FFmpeg command:", " ".join(cmd))
             
-            # Run FFmpeg
-            progress_bar.progress(30)
-            status_text.text("⚙️ Compressing video...")
-            
-            process = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
-                universal_newlines=True
-            )
-            stdout, stderr = process.communicate()
-            
-            progress_bar.progress(90)
-            
-            # Check results
-            if process.returncode != 0:
-                st.error("❌ Error during compression:")
-                st.code(stderr, language="text")
-            elif not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-                st.error("❌ Output file was not created successfully")
-            else:
-                # Success!
-                progress_bar.progress(100)
-                status_text.text("✅ Compression completed!")
+            # Check if we're in demo mode
+            if 'demo_mode' in locals() and demo_mode:
+                # Simulate compression for demo
+                progress_bar.progress(50)
+                status_text.text("🧪 Demo mode: Simulating compression...")
+                import time
+                time.sleep(2)  # Simulate processing time
                 
-                # Show file size comparison
+                # Create a dummy output file for demo
+                with open(out_path, 'wb') as f:
+                    f.write(b"Demo compressed video file")
+                
+                progress_bar.progress(100)
+                status_text.text("✅ Demo compression completed!")
+                
+                # Show simulated results
                 original_size = uploaded.size / 1024 / 1024
-                compressed_size = os.path.getsize(out_path) / 1024 / 1024
-                compression_ratio = (1 - compressed_size / original_size) * 100
+                simulated_compressed_size = original_size * 0.6  # Simulate 40% reduction
+                compression_ratio = 40.0
                 
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     st.metric("Original Size", f"{original_size:.2f} MB")
                 with col2:
-                    st.metric("Compressed Size", f"{compressed_size:.2f} MB")
+                    st.metric("Simulated Size", f"{simulated_compressed_size:.2f} MB")
                 with col3:
-                    st.metric("Size Reduction", f"{compression_ratio:.1f}%")
+                    st.metric("Simulated Reduction", f"{compression_ratio:.1f}%")
                 
-                # Download button
-                with open(out_path, "rb") as f:
-                    st.download_button(
-                        label="⬇️ Download Compressed Video",
-                        data=f.read(),
-                        file_name=f"compressed_{uploaded.name}",
-                        mime="video/mp4",
-                        type="primary"
-                    )
+                st.info("🧪 This is demo mode. Install FFmpeg for actual video compression.")
+                
+            else:
+                # Run actual FFmpeg
+                progress_bar.progress(30)
+                status_text.text("⚙️ Compressing video...")
+                
+                process = subprocess.Popen(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                    universal_newlines=True
+                )
+                stdout, stderr = process.communicate()
+                
+                progress_bar.progress(90)
+                
+                # Check results
+                if process.returncode != 0:
+                    st.error("❌ Error during compression:")
+                    st.code(stderr, language="text")
+                elif not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+                    st.error("❌ Output file was not created successfully")
+                else:
+                    # Success!
+                    progress_bar.progress(100)
+                    status_text.text("✅ Compression completed!")
+                    
+                    # Show file size comparison
+                    original_size = uploaded.size / 1024 / 1024
+                    compressed_size = os.path.getsize(out_path) / 1024 / 1024
+                    compression_ratio = (1 - compressed_size / original_size) * 100
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Original Size", f"{original_size:.2f} MB")
+                    with col2:
+                        st.metric("Compressed Size", f"{compressed_size:.2f} MB")
+                    with col3:
+                        st.metric("Size Reduction", f"{compression_ratio:.1f}%")
+                    
+                    # Download button
+                    with open(out_path, "rb") as f:
+                        st.download_button(
+                            label="⬇️ Download Compressed Video",
+                            data=f.read(),
+                            file_name=f"compressed_{uploaded.name}",
+                            mime="video/mp4",
+                            type="primary"
+                        )
     
     except Exception as e:
         st.error(f"❌ Unexpected error: {str(e)}")
