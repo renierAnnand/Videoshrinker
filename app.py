@@ -117,7 +117,7 @@ if uploaded is not None:
             # Verify input file exists and has content
             if not os.path.exists(in_path) or os.path.getsize(in_path) == 0:
                 st.error("❌ Failed to create temporary input file")
-                return
+            else:
         
             # Build FFmpeg command
             cmd = [
@@ -182,31 +182,30 @@ if uploaded is not None:
                 # Verify output file exists
                 if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
                     st.error("❌ Output file was not created successfully")
-                    return
-                
-                # Get file sizes
-                original_size = uploaded.size / 1024 / 1024
-                compressed_size = os.path.getsize(out_path) / 1024 / 1024
-                compression_ratio = (1 - compressed_size / original_size) * 100
-                
-                # Success message with stats
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Original Size", f"{original_size:.2f} MB")
-                with col2:
-                    st.metric("Compressed Size", f"{compressed_size:.2f} MB")
-                with col3:
-                    st.metric("Size Reduction", f"{compression_ratio:.1f}%")
-                
-                # Download button
-                with open(out_path, "rb") as f:
-                    st.download_button(
-                        label="⬇️ Download Compressed Video",
-                        data=f.read(),
-                        file_name=f"compressed_{uploaded.name}",
-                        mime="video/mp4",
-                        type="primary"
-                    )
+                else:
+                    # Get file sizes
+                    original_size = uploaded.size / 1024 / 1024
+                    compressed_size = os.path.getsize(out_path) / 1024 / 1024
+                    compression_ratio = (1 - compressed_size / original_size) * 100
+                    
+                    # Success message with stats
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Original Size", f"{original_size:.2f} MB")
+                    with col2:
+                        st.metric("Compressed Size", f"{compressed_size:.2f} MB")
+                    with col3:
+                        st.metric("Size Reduction", f"{compression_ratio:.1f}%")
+                    
+                    # Download button
+                    with open(out_path, "rb") as f:
+                        st.download_button(
+                            label="⬇️ Download Compressed Video",
+                            data=f.read(),
+                            file_name=f"compressed_{uploaded.name}",
+                            mime="video/mp4",
+                            type="primary"
+                        )
                 
         except Exception as e:
             st.error(f"❌ Unexpected error: {str(e)}")
