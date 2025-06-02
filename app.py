@@ -101,53 +101,62 @@ if uploaded is not None:
         )
     
     if st.button("🚀 Compress Video", type="primary"):
-        # Create temporary files
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded.name)[1]) as in_tmp:
-            in_tmp.write(uploaded.read())
-            in_path = in_tmp.name
-        
-        # Output file
-        base_name = os.path.splitext(uploaded.name)[0]
-        out_suffix = ".mp4"
-        with tempfile.NamedTemporaryFile(delete=False, suffix=out_suffix) as out_tmp:
-            out_path = out_tmp.name
-        
-        # Build FFmpeg command
-        cmd = [
-            "ffmpeg",
-            "-y",  # Overwrite output file
-            "-i", in_path,
-            "-vcodec", video_codec,
-            "-crf", str(crf_value),
-            "-acodec", "aac",
-            "-b:a", audio_bitrate,
-            "-movflags", "+faststart"  # Optimize for web streaming
-        ]
-        
-        # Add video filters
-        video_filters = []
-        
-        # Scale filter
-        if scale_width and scale_width > 0:
-            video_filters.append(f"scale='min({scale_width},iw)':'-2'")
-        
-        # Frame rate filter
-        if framerate_limit and framerate_limit > 0:
-            video_filters.append(f"fps=fps='min({framerate_limit},source_fps)'")
-        
-        # Apply filters if any
-        if video_filters:
-            cmd += ["-vf", ",".join(video_filters)]
-        
-        cmd.append(out_path)
-        
-        # Progress tracking
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
+        # Create temporary files with proper handling
         try:
+            # Input file
+            input_suffix = os.path.splitext(uploaded.name)[1] or '.mp4'
+            with tempfile.NamedTemporaryFile(delete=False, suffix=input_suffix) as in_tmp:
+                in_tmp.write(uploaded.getvalue())  # Use getvalue() instead of read()
+                in_tmp.flush()  # Ensure data is written
+                in_path = in_tmp.name
+            
+            # Output file
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as out_tmp:
+                out_path = out_tmp.name
+            
+            # Verify input file exists and has content
+            if not os.path.exists(in_path) or os.path.getsize(in_path) == 0:
+                st.error("❌ Failed to create temporary input file")
+                return
+        
+            # Build FFmpeg command
+            cmd = [
+                "ffmpeg",
+                "-y",  # Overwrite output file
+                "-i", in_path,
+                "-vcodec", video_codec,
+                "-crf", str(crf_value),
+                "-acodec", "aac",
+                "-b:a", audio_bitrate,
+                "-movflags", "+faststart"  # Optimize for web streaming
+            ]
+        
+            # Add video filters
+            video_filters = []
+            
+            # Scale filter
+            if scale_width and scale_width > 0:
+                video_filters.append(f"scale='min({scale_width},iw)':'-2'")
+            
+            # Frame rate filter
+            if framerate_limit and framerate_limit > 0:
+                video_filters.append(f"fps=fps='min({framerate_limit},source_fps)'")
+            
+            # Apply filters if any
+            if video_filters:
+                cmd += ["-vf", ",".join(video_filters)]
+            
+            cmd.append(out_path)
+            
+            # Progress tracking
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
             status_text.text("🔄 Starting compression...")
             progress_bar.progress(10)
+            
+            # Debug: Show command being executed (remove in production)
+            st.write("Debug - FFmpeg command:", " ".join(cmd))
             
             # Run FFmpeg with progress monitoring
             process = subprocess.Popen(
@@ -165,9 +174,15 @@ if uploaded is not None:
             if process.returncode != 0:
                 st.error(f"❌ Error during compression:")
                 st.code(stderr, language="text")
+                st.write("FFmpeg stdout:", stdout)
             else:
                 progress_bar.progress(100)
                 status_text.text("✅ Compression completed!")
+                
+                # Verify output file exists
+                if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+                    st.error("❌ Output file was not created successfully")
+                    return
                 
                 # Get file sizes
                 original_size = uploaded.size / 1024 / 1024
@@ -195,18 +210,23 @@ if uploaded is not None:
                 
         except Exception as e:
             st.error(f"❌ Unexpected error: {str(e)}")
+            st.write("Error details:", str(e))
         
         finally:
             # Clean up temporary files
             try:
-                os.remove(in_path)
-                os.remove(out_path)
-            except Exception:
-                pass  # Files may already be deleted
+                if 'in_path' in locals() and os.path.exists(in_path):
+                    os.remove(in_path)
+                if 'out_path' in locals() and os.path.exists(out_path):
+                    os.remove(out_path)
+            except Exception as cleanup_error:
+                st.write(f"Cleanup warning: {cleanup_error}")
             
             # Clear progress indicators
-            progress_bar.empty()
-            status_text.empty()
+            if 'progress_bar' in locals():
+                progress_bar.empty()
+            if 'status_text' in locals():
+                status_text.empty()
 
 # Footer with usage tips
 with st.expander("💡 Usage Tips"):
