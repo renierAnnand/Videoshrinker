@@ -1,0 +1,23 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Streamlit cache folder (if used)
+.streamlit/
+
+# Virtual environment folders
+venv/
+.env/
+
+# Temporary or OS files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# FFmpeg output files (optional)
+*.mp4
+*.mov
+*.avi
+*.mkv
