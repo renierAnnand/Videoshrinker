@@ -1,3 +1,6 @@
 streamlit
 moviepy
-apt.txt
+ffmpeg-python
+numpy
+Pillow
+imageio-ffmpeg
