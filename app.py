@@ -118,6 +118,7 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
         import os
         common_paths = [
             "C:\\ffmpeg\\bin\\ffmpeg.exe",
+            "C:\\Users\\rannandale\\OneDrive\\Coding\\video-shrinker\\ffmpeg-master-latest-win64-gpl\\bin\\ffmpeg.exe",
             "ffmpeg.exe",
             "ffmpeg"
         ]
