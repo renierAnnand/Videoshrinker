@@ -3,14 +3,14 @@ import tempfile
 import subprocess
 import os
 
-# Configure Streamlit with increased file upload limit
+# Configure Streamlit
 st.set_page_config(
     page_title="Video Shrinker", 
     layout="centered"
 )
 
-# Set max upload size to 1GB (1024 MB)
-st.config.set_option('server.maxUploadSize', 1024)
+# Note: File upload limit is set via command line or config.toml
+# Run with: streamlit run app.py --server.maxUploadSize=1024
 
 st.title("📹 Video Shrinker (using FFmpeg)")
 st.markdown("Upload a video (up to 1GB), choose compression settings, and download a smaller version.")
@@ -104,30 +104,50 @@ if uploaded is not None:
 if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
     # Check if FFmpeg is available
     try:
-        subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
-    except (subprocess.CalledProcessError, FileNotFoundError):
+        result = subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True, text=True)
+        st.success("✅ FFmpeg detected successfully!")
+        st.write("FFmpeg version:", result.stdout.split('\n')[0])
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
         st.error("❌ FFmpeg is not installed or not found in system PATH.")
+        
+        # Debug information
+        st.write("**Debug Info:**")
+        st.write("Error:", str(e))
+        
+        # Check if ffmpeg.exe exists in common locations
+        import os
+        common_paths = [
+            "C:\\ffmpeg\\bin\\ffmpeg.exe",
+            "ffmpeg.exe",
+            "ffmpeg"
+        ]
+        
+        for path in common_paths:
+            if os.path.exists(path):
+                st.write(f"✅ Found FFmpeg at: {path}")
+            else:
+                st.write(f"❌ Not found at: {path}")
+        
+        # Show PATH environment variable
+        path_env = os.environ.get('PATH', '')
+        st.write("Current PATH contains:")
+        for path_part in path_env.split(os.pathsep):
+            if 'ffmpeg' in path_part.lower():
+                st.write(f"🎯 {path_part}")
+        
         st.info("""
-        **To install FFmpeg:**
+        **Quick fixes to try:**
         
-        **On Ubuntu/Debian:**
-        ```bash
-        sudo apt update && sudo apt install ffmpeg
-        ```
+        1. **Restart Streamlit completely:**
+           - Stop the app (Ctrl+C)
+           - Close terminal
+           - Open new Command Prompt
+           - Run: `streamlit run app.py`
         
-        **On macOS:**
-        ```bash
-        brew install ffmpeg
-        ```
+        2. **Try running from the directory where ffmpeg.exe is located**
         
-        **On Windows:**
-        - Download from https://ffmpeg.org/download.html
-        - Add to system PATH
-        
-        **For Docker/Cloud deployments:**
-        - Add FFmpeg to your Dockerfile or requirements
-        
-        **Alternative:** Enable 'Demo Mode' below to test the interface without FFmpeg.
+        3. **Use absolute path test:**
+           - Try running: `C:\\ffmpeg\\bin\\ffmpeg.exe -version` in Command Prompt
         """)
         
         # Demo mode toggle
