@@ -9,9 +9,6 @@ st.set_page_config(
     layout="centered"
 )
 
-# Note: File upload limit is set via command line or config.toml
-# Run with: streamlit run app.py --server.maxUploadSize=1024
-
 st.title("📹 Video Shrinker (using FFmpeg)")
 st.markdown("Upload a video (up to 1GB), choose compression settings, and download a smaller version.")
 
@@ -28,13 +25,11 @@ if uploaded is not None:
     st.write(f"**Format:** {uploaded.type}")
     st.write(f"**Size:** {file_size_mb:.2f} MB")
     
-    # Show warning for very large files
     if file_size_mb > 500:
         st.warning("⚠️ Large file detected. Compression may take several minutes.")
     
     st.sidebar.header("🎛️ Compression Settings")
     
-    # Quality preset
     quality_preset = st.sidebar.selectbox(
         "Quality Preset",
         options=["Custom", "High Quality", "Balanced", "Small Size"],
@@ -42,14 +37,13 @@ if uploaded is not None:
         help="Quick presets for common use cases"
     )
     
-    # Set default values based on preset
     if quality_preset == "High Quality":
         default_crf, default_audio = 20, "192k"
     elif quality_preset == "Balanced":
         default_crf, default_audio = 23, "128k"
     elif quality_preset == "Small Size":
         default_crf, default_audio = 28, "96k"
-    else:  # Custom
+    else:
         default_crf, default_audio = 23, "128k"
     
     crf_value = st.sidebar.slider(
@@ -58,7 +52,6 @@ if uploaded is not None:
         help="Lower CRF = higher quality but larger file. Higher CRF = smaller file but lower quality."
     )
     
-    # Resolution options
     resolution_option = st.sidebar.selectbox(
         "Resolution",
         options=["Keep Original", "1920x1080 (1080p)", "1280x720 (720p)", "854x480 (480p)", "Custom"],
@@ -85,7 +78,6 @@ if uploaded is not None:
         help="Lower audio bitrate reduces file size but may affect audio quality."
     )
     
-    # Advanced options
     with st.sidebar.expander("🔧 Advanced Options"):
         video_codec = st.selectbox(
             "Video Codec",
@@ -100,9 +92,7 @@ if uploaded is not None:
             help="Leave 0 to keep original framerate"
         )
 
-# Compress button and processing
 if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
-    # Check if FFmpeg is available
     try:
         result = subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True, text=True)
         st.success("✅ FFmpeg detected successfully!")
@@ -110,17 +100,14 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
         st.error("❌ FFmpeg is not installed or not found in system PATH.")
         
-        # Debug information
         st.write("**Debug Info:**")
         st.write("Error:", str(e))
         
-        # Updated lookup paths (add your actual path first)
+        # Updated lookup paths
         common_paths = [
-            # ← Replace this with the exact location of your ffmpeg.exe:
+            # ← Update this to the exact location you verified:
             r"C:\Users\rannandale\OneDrive\Coding\video-shrinker\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe",
-            # You can also keep C:\ffmpeg\bin\ffmpeg.exe if you might install there:
             r"C:\ffmpeg\bin\ffmpeg.exe",
-            # Fallback to searching on PATH
             "ffmpeg.exe",
             "ffmpeg"
         ]
@@ -131,7 +118,6 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
             else:
                 st.write(f"❌ Not found at: {path}")
         
-        # Show PATH environment variable entries containing “ffmpeg”
         path_env = os.environ.get('PATH', '')
         st.write("Current PATH contains:")
         for path_part in path_env.split(os.pathsep):
@@ -153,7 +139,6 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
            - Run: `C:\\Users\\rannandale\\OneDrive\\Coding\\video-shrinker\\ffmpeg-master-latest-win64-gpl\\bin\\ffmpeg.exe -version`
         """)
         
-        # Demo mode toggle
         demo_mode = st.checkbox("🧪 Enable Demo Mode (simulates compression without FFmpeg)")
         if not demo_mode:
             st.stop()
@@ -162,25 +147,21 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
     status_text = st.empty()
     
     try:
-        # Create temporary input file
         input_suffix = os.path.splitext(uploaded.name)[1] or '.mp4'
         with tempfile.NamedTemporaryFile(delete=False, suffix=input_suffix) as in_tmp:
             in_tmp.write(uploaded.getvalue())
             in_tmp.flush()
             in_path = in_tmp.name
         
-        # Create temporary output file
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as out_tmp:
             out_path = out_tmp.name
         
-        # Verify input file
         if not os.path.exists(in_path) or os.path.getsize(in_path) == 0:
             st.error("❌ Failed to create temporary input file")
         else:
             status_text.text("🔄 Starting compression...")
             progress_bar.progress(10)
             
-            # Build FFmpeg command
             cmd = [
                 "ffmpeg", "-y", "-i", in_path,
                 "-vcodec", video_codec,
@@ -190,7 +171,6 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
                 "-movflags", "+faststart"
             ]
             
-            # Add video filters
             video_filters = []
             if scale_width and scale_width > 0:
                 video_filters.append(f"scale='min({scale_width},iw)':'-2'")
@@ -202,27 +182,22 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
             
             cmd.append(out_path)
             
-            # Show debug command
             st.write("Debug - FFmpeg command:", " ".join(cmd))
             
-            # Check if we're in demo mode
             if 'demo_mode' in locals() and demo_mode:
-                # Simulate compression for demo
                 progress_bar.progress(50)
                 status_text.text("🧪 Demo mode: Simulating compression...")
                 import time
-                time.sleep(2)  # Simulate processing time
+                time.sleep(2)
                 
-                # Create a dummy output file for demo
                 with open(out_path, 'wb') as f:
                     f.write(b"Demo compressed video file")
                 
                 progress_bar.progress(100)
                 status_text.text("✅ Demo compression completed!")
                 
-                # Show simulated results
                 original_size = uploaded.size / 1024 / 1024
-                simulated_compressed_size = original_size * 0.6  # Simulate 40% reduction
+                simulated_compressed_size = original_size * 0.6
                 compression_ratio = 40.0
                 
                 col1, col2, col3 = st.columns(3)
@@ -236,7 +211,6 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
                 st.info("🧪 This is demo mode. Install FFmpeg for actual video compression.")
                 
             else:
-                # Run actual FFmpeg
                 progress_bar.progress(30)
                 status_text.text("⚙️ Compressing video...")
                 
@@ -248,18 +222,15 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
                 
                 progress_bar.progress(90)
                 
-                # Check results
                 if process.returncode != 0:
                     st.error("❌ Error during compression:")
                     st.code(stderr, language="text")
                 elif not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
                     st.error("❌ Output file was not created successfully")
                 else:
-                    # Success!
                     progress_bar.progress(100)
                     status_text.text("✅ Compression completed!")
                     
-                    # Show file size comparison
                     original_size = uploaded.size / 1024 / 1024
                     compressed_size = os.path.getsize(out_path) / 1024 / 1024
                     compression_ratio = (1 - compressed_size / original_size) * 100
@@ -272,7 +243,6 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
                     with col3:
                         st.metric("Size Reduction", f"{compression_ratio:.1f}%")
                     
-                    # Download button
                     with open(out_path, "rb") as f:
                         st.download_button(
                             label="⬇️ Download Compressed Video",
@@ -286,7 +256,6 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
         st.error(f"❌ Unexpected error: {str(e)}")
     
     finally:
-        # Clean up temporary files
         try:
             if 'in_path' in locals() and os.path.exists(in_path):
                 os.remove(in_path)
@@ -295,13 +264,11 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
         except:
             pass
         
-        # Clear progress indicators
         if 'progress_bar' in locals():
             progress_bar.empty()
         if 'status_text' in locals():
             status_text.empty()
 
-# Footer with usage tips
 if uploaded is not None:
     with st.expander("💡 Usage Tips"):
         st.markdown("""
@@ -319,6 +286,6 @@ if uploaded is not None:
         - **H.264 (libx264)**: Faster encoding, good compatibility
         - **H.265 (libx265)**: Better compression, slower encoding
         """)
-
+        
 st.markdown("---")
 st.markdown("*Powered by FFmpeg • Built with Streamlit*")
