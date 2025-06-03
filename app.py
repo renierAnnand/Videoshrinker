@@ -114,11 +114,13 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
         st.write("**Debug Info:**")
         st.write("Error:", str(e))
         
-        # Check if ffmpeg.exe exists in common locations
-        import os
+        # Updated lookup paths (add your actual path first)
         common_paths = [
-            "C:\\ffmpeg\\bin\\ffmpeg.exe",
-            "C:\\Users\\rannandale\\OneDrive\\Coding\\video-shrinker\\ffmpeg-master-latest-win64-gpl\\bin\\ffmpeg.exe",
+            # ← Replace this with the exact location of your ffmpeg.exe:
+            r"C:\Users\rannandale\OneDrive\Coding\video-shrinker\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe",
+            # You can also keep C:\ffmpeg\bin\ffmpeg.exe if you might install there:
+            r"C:\ffmpeg\bin\ffmpeg.exe",
+            # Fallback to searching on PATH
             "ffmpeg.exe",
             "ffmpeg"
         ]
@@ -129,7 +131,7 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
             else:
                 st.write(f"❌ Not found at: {path}")
         
-        # Show PATH environment variable
+        # Show PATH environment variable entries containing “ffmpeg”
         path_env = os.environ.get('PATH', '')
         st.write("Current PATH contains:")
         for path_part in path_env.split(os.pathsep):
@@ -148,7 +150,7 @@ if uploaded is not None and st.button("🚀 Compress Video", type="primary"):
         2. **Try running from the directory where ffmpeg.exe is located**
         
         3. **Use absolute path test:**
-           - Try running: `C:\\ffmpeg\\bin\\ffmpeg.exe -version` in Command Prompt
+           - Run: `C:\\Users\\rannandale\\OneDrive\\Coding\\video-shrinker\\ffmpeg-master-latest-win64-gpl\\bin\\ffmpeg.exe -version`
         """)
         
         # Demo mode toggle
